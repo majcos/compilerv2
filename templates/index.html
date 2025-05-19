@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>DFA Simulator</title>
+
+  <!-- main stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"/>
+
+  <!-- FontAwesome -->
+  <script src="https://kit.fontawesome.com/your-kit.js" crossorigin="anonymous"></script>
+
+  <!-- Cytoscape core -->
+  <script src="https://unpkg.com/cytoscape/dist/cytoscape.min.js"></script>
+  <!-- Dagre core & bridge -->
+  <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
+
+  <style>
+    .hidden  { display: none !important; }
+    .visible { display: block !important; }
+    #cy { width:100%; height:80vh; }
+  </style>
+</head>
+<body data-theme="{{ 'dark' if request.cookies.get('theme')=='dark' else 'light' }}">
+  <aside>
+    <div class="header">
+      <div class="logo-container">
+        <div class="logo"><i class="fas fa-project-diagram"></i></div>
+        <h1>DFA Simulator</h1>
+      </div>
+      <button id="mode-toggle" class="toggle-mode"><i class="fas fa-moon"></i></button>
+    </div>
+
+    <div class="control-group">
+      <label for="regex-select">Language Type</label>
+      <select id="regex-select">
+        <option value="" disabled selected>-- choose --</option>
+        <option value="binary">Binary Pattern</option>
+        <option value="alphabet">Alphabet Pattern</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <label for="input-string">Input String</label>
+      <input id="input-string" type="text" placeholder="Enter a string..." disabled/>
+    </div>
+
+    <div class="button-group" style="display:flex; gap:.5rem;">
+      <button id="simulate-btn" disabled><i class="fas fa-play"></i> Simulate DFA</button>
+      <button id="reset-btn"><i class="fas fa-undo"></i> Reset</button>
+    </div>
+
+    <div id="result" class="result-empty">Waiting for simulation...</div>
+  </aside>
+
+  <main>
+    <div id="regex-card" class="card hidden">
+      <h2><i class="fas fa-code"></i> Regular Expression</h2>
+      <div id="regex-display" class="placeholder"></div>
+    </div>
+
+    <div id="cy-card" class="card hidden">
+      <h2><i class="fas fa-project-diagram"></i> DFA Visualization</h2>
+      <div id="cy"></div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h2><i class="fas fa-server"></i> PDA Description</h2>
+        <div class="placeholder" id="pda-placeholder"></div>
+      </div>
+      <div class="card">
+        <h2><i class="fas fa-sitemap"></i> Context‐Free Grammar</h2>
+        <div class="placeholder" id="cfg-placeholder"></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // register dagre
+    cytoscape.use(cytoscapeDagre);
+
+    // timing constants
+    const STEP_DELAY     = 200;  // ms between each character step
+    const ANIM_DURATION  = 120;  // ms for edge/node highlight
+    const RESET_DURATION =  80;  // ms to reset edge color
+
+    // UI refs
+    const select       = document.getElementById('regex-select');
+    const regexCard    = document.getElementById('regex-card');
+    const regexDisplay = document.getElementById('regex-display');
+    const cyCard       = document.getElementById('cy-card');
+    const inputBox     = document.getElementById('input-string');
+    const simulateBtn  = document.getElementById('simulate-btn');
+    const resetBtn     = document.getElementById('reset-btn');
+    const resultDiv    = document.getElementById('result');
+
+    // default regex
+    const defaultRegex =
+      '(111 + 000 + 101 + 001)(1+0)*(11 + 00)(11 + 00)*' +
+      '(101 + 111 + 000)(101+111+000)*' +
+      '(11+00)(1 + 0 + 11)(11*)(00*)(1* + 0* +1 + 0)(1+0)*';
+
+    // accent color
+    const accentColor = getComputedStyle(document.documentElement)
+      .getPropertyValue('--accent').trim();
+
+    // DFA transitions
+    const TRANSITIONS = {
+      q0:{0:'q2',1:'q1'}, q1:{0:'q3',1:'q3'},
+      q2:{0:'q4',1:'T'},  q3:{0:'T',1:'q5'},
+      q4:{0:'q5',1:'q5'}, q5:{0:'q7',1:'q6'},
+      q6:{0:'q7',1:'q8'}, q7:{0:'q8',1:'q6'},
+      q8:{0:'q10',1:'q9'},q9:{0:'q11',1:'q12'},
+      q10:{0:'q13',1:'q8'},q11:{0:'T',1:'q14'},
+      q12:{0:'q9',1:'q14'},q13:{0:'q14',1:'T'},
+      q14:{0:'q16',1:'q15'},q15:{0:'q16',1:'q17'},
+      q16:{0:'q17',1:'q15'},q17:{0:'q19',1:'q18'},
+      q18:{0:'q15',1:'q20'},q19:{0:'q20',1:'q17'},
+      q20:{0:'q21',1:'q20'},q21:{0:'q21',1:'q21'},
+      T:{0:'T',1:'T'}
+    };
+    const STATES = Object.keys(TRANSITIONS);
+    const START  = 'q0';
+    const ACCEPT = new Set(['q21']);
+
+    // build elements
+    const cyElems = [
+      ...STATES.map(s=>({
+        data:{id:s},
+        classes:s===START?'start':(ACCEPT.has(s)?'accept':'')
+      })),
+      ...STATES.flatMap(src=>
+        Object.entries(TRANSITIONS[src]).map(
+          ([sym,dst])=>({
+            data:{id:`${src}_${sym}_${dst}`,source:src,target:dst,label:sym}
+          })
+        )
+      )
+    ];
+
+    // init cytoscape
+    const cy = cytoscape({
+      container: document.getElementById('cy'),
+      elements: cyElems,
+      style: [
+        { selector:'node', style:{
+            label:'data(id)','text-valign':'center','text-halign':'center',
+            'background-color':'#444','color':'#fff',
+            width:40,height:40,'border-width':2,'border-color':'#222'
+        }},
+        { selector:'node.start', style:{'border-color':'#48bb78','border-width':4}},
+        { selector:'node.accept', style:{
+            shape:'doublecircle','border-color':'#e53e3e','border-width':4
+        }},
+        { selector:'edge', style:{
+            'curve-style':'bezier','target-arrow-shape':'triangle',
+            label:'data(label)','font-size':8,
+            'line-color':'#888','target-arrow-color':'#888'
+        }},
+        { selector:'.highlighted', style:{
+            'background-color':accentColor,
+            'line-color':accentColor,'target-arrow-color':accentColor
+        }}
+      ],
+      layout:{name:'dagre',rankDir:'LR',nodeSep:50,edgeSep:10,rankSep:100,padding:20}
+    });
+
+    // animated simulation
+    function simulateDFA(input) {
+      cy.elements().removeClass('highlighted');
+      let cur = START;
+      cy.getElementById(cur).addClass('highlighted');
+
+      input.split('').reduce((p, ch, i) =>
+        p.then(() => new Promise(resolve => {
+          const next = TRANSITIONS[cur][ch] || 'T';
+          const edge = cy.getElementById(`${cur}_${ch}_${next}`);
+          const node = cy.getElementById(next);
+
+          // animate edge
+          edge.animate({
+            style:{
+              'line-color':accentColor,
+              'target-arrow-color':accentColor
+            }
+          },{duration:ANIM_DURATION}).play();
+
+          // animate node
+          node.animate({
+            style:{'background-color':accentColor}
+          },{duration:ANIM_DURATION}).play();
+
+          setTimeout(()=>{
+            edge.animate({
+              style:{
+                'line-color':'#888',
+                'target-arrow-color':'#888'
+              }
+            },{duration:RESET_DURATION}).play();
+            cur = next;
+            resolve();
+          }, ANIM_DURATION);
+        })).then(() => new Promise(r=>setTimeout(r, STEP_DELAY)))
+      , Promise.resolve())
+      .then(() => {
+        setTimeout(()=>{
+          const ok = ACCEPT.has(cur);
+          resultDiv.textContent = ok ? 'ACCEPTED' : 'REJECTED';
+          resultDiv.className   = ok ? 'valid'   : 'invalid';
+        }, RESET_DURATION);
+      });
+    }
+
+    // UI toggle
+    function updateUI(){
+      if(select.value==='binary'){
+        regexDisplay.textContent = defaultRegex;
+        regexCard.classList.replace('hidden','visible');
+        cyCard.classList.replace('hidden','visible');
+        inputBox.disabled = false;
+        simulateBtn.disabled = false;
+        resultDiv.textContent = 'Waiting for simulation...';
+        resultDiv.className   = 'result-empty';
+      } else {
+        regexCard.classList.replace('visible','hidden');
+        cyCard.classList.replace('visible','hidden');
+        inputBox.disabled = true;
+        simulateBtn.disabled = true;
+      }
+    }
+    select.addEventListener('change', updateUI);
+
+    // buttons
+    simulateBtn.addEventListener('click', ()=>{
+      const str = inputBox.value.trim();
+      if(str) simulateDFA(str);
+    });
+    resetBtn.addEventListener('click', ()=>location.reload());
+
+    // theme toggle
+    document.getElementById('mode-toggle')
+      .addEventListener('click', ()=>{
+        const root = document.documentElement;
+        const next = root.getAttribute('data-theme')==='light'?'dark':'light';
+        root.setAttribute('data-theme', next);
+        document.cookie = `theme=${next};path=/;max-age=31536000`;
+      });
+  });
+  </script>
+</body>
+</html>

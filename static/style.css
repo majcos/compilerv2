@@ -1,0 +1,354 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    :root {
+      --bg-gradient: linear-gradient(145deg, #f9f9f9, #ffffff);
+      --card-gradient: linear-gradient(145deg, #f0f0f0, #fafafa);
+      --text: #2d3748;
+      --text-secondary: #718096;
+      --accent: #4299e1;
+      --accent-hover: #3182ce;
+      --valid: #48bb78;
+      --invalid: #e53e3e;
+      --warn: #ed8936;
+      --radius: 12px;
+      --shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+      --border: 1px solid rgba(0, 0, 0, 0.08);
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    [data-theme="dark"] {
+      --bg-gradient: linear-gradient(145deg, #1a202c, #2d3748);
+      --card-gradient: linear-gradient(145deg, #2d3748, #1a202c);
+      --text: #f7fafc;
+      --text-secondary: #cbd5e0;
+      --accent: #63b3ed;
+      --accent-hover: #4299e1;
+      --valid: #68d391;
+      --invalid: #fc8181;
+      --warn: #f6ad55;
+      --border: 1px solid rgba(255, 255, 255, 0.08);
+      --shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text);
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      min-height: 100vh;
+      transition: var(--transition);
+    }
+
+    aside {
+      background: var(--card-gradient);
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      box-shadow: var(--shadow);
+      position: relative;
+      z-index: 10;
+    }
+
+    main {
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.75rem;
+      font-weight: 700;
+      background: linear-gradient(45deg, var(--accent), var(--accent-hover));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      letter-spacing: -0.03em;
+    }
+
+    h2 {
+      margin: 0 0 1rem 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    h2 i {
+      color: var(--accent);
+      font-size: 1rem;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    label {
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    select, input[type="text"] {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius);
+      border: var(--border);
+      font-size: 1rem;
+      background: var(--bg-gradient);
+      color: var(--text);
+      transition: var(--transition);
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+    }
+
+    select:focus, input[type="text"]:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+    }
+
+    button {
+      width: 100%;
+      padding: 0.75rem;
+      border-radius: var(--radius);
+      border: none;
+      font-size: 1rem;
+      font-weight: 600;
+      background: linear-gradient(to right, var(--accent), var(--accent-hover));
+      color: white;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(66, 153, 225, 0.25);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .card {
+      background: var(--card-gradient);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1.5rem;
+      transition: var(--transition);
+      border: var(--border);
+      height: 100%;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    }
+
+    #result {
+      font-weight: 600;
+      border-radius: var(--radius);
+      padding: 1rem;
+      text-align: center;
+      transition: var(--transition);
+      font-size: 1.05rem;
+    }
+
+    .result-empty {
+      background: transparent;
+      color: var(--text-secondary);
+    }
+
+    .valid {
+      background: var(--valid);
+      color: white;
+    }
+
+    .invalid {
+      background: var(--invalid);
+      color: white;
+    }
+
+    .warn {
+      background: var(--warn);
+      color: white;
+    }
+
+    .placeholder, #regex-display, #cfg-placeholder {
+      background: var(--bg-gradient);
+      padding: 1.25rem;
+      border-radius: var(--radius);
+      font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+      white-space: pre-wrap;
+      font-size: 0.9rem;
+      color: var(--text);
+      border: var(--border);
+      overflow-x: auto;
+      line-height: 1.5;
+    }
+
+    #cy {
+      width: 100%;
+      height: 450px;
+      border-radius: var(--radius);
+      background: var(--bg-gradient);
+      border: var(--border);
+      box-shadow: var(--shadow);
+      transition: var(--transition);
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .toggle-mode {
+      cursor: pointer;
+      background: transparent;
+      border: var(--border);
+      padding: 0.5rem;
+      border-radius: 50%;
+      color: var(--text);
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      transition: var(--transition);
+    }
+
+    .toggle-mode:hover {
+      background: var(--accent);
+      color: white;
+      transform: rotate(45deg);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+    }
+
+    .step-counter {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-right: 0.5rem;
+    }
+
+    /* Input animation */
+    .input-animation {
+      margin-top: 1rem;
+      display: flex;
+      align-items: center;
+      overflow-x: auto;
+      padding: 0.5rem;
+      min-height: 60px;
+      background: var(--bg-gradient);
+      border-radius: var(--radius);
+      border: var(--border);
+      scroll-behavior: smooth;
+      position: relative;
+    }
+
+    .char-box {
+      min-width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius);
+      font-weight: 600;
+      transition: var(--transition);
+      border: var(--border);
+      background: var(--bg-gradient);
+      padding: 0 0.75rem;
+      flex-shrink: 0;
+    }
+
+    .char-box.current {
+      background: var(--accent);
+      color: white;
+      transform: translateY(-4px);
+      box-shadow: 0 4px 12px rgba(66, 153, 225, 0.25);
+    }
+
+    .char-box.processed {
+      background: var(--text-secondary);
+      color: white;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(45deg, var(--accent), var(--accent-hover));
+      color: white;
+      font-size: 1.25rem;
+    }
+
+    @media (max-width: 1024px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 800px) {
+      body {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+      }
+      
+      aside {
+        padding: 1.5rem;
+      }
+      
+      main {
+        padding: 1.5rem;
+      }
+
+   .hidden { display: none !important; }
+  .visible { display: block !important; }
+
+    }
