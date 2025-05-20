@@ -3,7 +3,7 @@ from flask import Flask, render_template, request, send_file
 from graphviz import Digraph
 import io
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates', static_folder='static')
 
 class DFA:
     def __init__(self, states, alphabet, transitions, start_state, accept_states):
