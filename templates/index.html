@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"/>
 
   <!-- FontAwesome -->
-  <script src="https://kit.fontawesome.com/your-kit.js" crossorigin="anonymous"></script>
+ <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
   <!-- Cytoscape core -->
   <script src="https://unpkg.com/cytoscape/dist/cytoscape.min.js"></script>
@@ -22,14 +22,16 @@
     #cy { width:100%; height:80vh; }
   </style>
 </head>
-<body data-theme="{{ 'dark' if request.cookies.get('theme')=='dark' else 'light' }}">
+<html lang="en" data-theme="{{ 'dark' if request.cookies.get('theme')=='dark' else 'light' }}">
   <aside>
     <div class="header">
       <div class="logo-container">
         <div class="logo"><i class="fas fa-project-diagram"></i></div>
         <h1>DFA Simulator</h1>
       </div>
-      <button id="mode-toggle" class="toggle-mode"><i class="fas fa-moon"></i></button>
+      <button id="mode-toggle" class="toggle-mode">
+        <i id="mode-icon" class="fas fa-moon"></i>
+      </button>
     </div>
 
     <div class="control-group">
@@ -52,6 +54,25 @@
     </div>
 
     <div id="result" class="result-empty">Waiting for simulation...</div>
+
+<div class="validation-item">
+  <div class="status-label">PDA STATUS:</div>
+  <div class="status-content">
+    <span id="pda-status" class="status-waiting"></span>
+    <button id="check-pda-btn" class="check-btn" disabled>
+      <i class="fas fa-check-circle"></i> Validate PDA
+    </button>
+  </div>
+</div>
+<div class="validation-item">
+  <div class="status-label">CFG STATUS:</div>
+  <div class="status-content">
+    <span id="cfg-status" class="status-waiting"></span>
+    <button id="check-cfg-btn" class="check-btn" disabled>
+      <i class="fas fa-check-circle"></i> Validate CFG
+    </button>
+  </div>
+</div>
   </aside>
 
   <main>
@@ -65,14 +86,29 @@
       <div id="cy"></div>
     </div>
 
-    <div class="grid">
-      <div class="card">
-        <h2><i class="fas fa-server"></i> PDA Description</h2>
-        <div class="placeholder" id="pda-placeholder"></div>
-      </div>
-      <div class="card">
+  <div style="display: flex; justify-content: center; gap: 2rem; margin-top: 1rem;">
+  <button id="show-cfg-btn"><i class="fas fa-sitemap"></i> View CFG</button>
+  <button id="show-pda-btn"><i class="fas fa-server"></i> View PDA</button>
+</div>
+
+
+    <div id="cfg-modal" class="modal">
+      <div class="modal-content">
+        <span class="close">&times;</span>
         <h2><i class="fas fa-sitemap"></i> Context‐Free Grammar</h2>
-        <div class="placeholder" id="cfg-placeholder"></div>
+        <div class="modal-image-container">
+          <img id="cfg-image" src="" alt="Context-Free Grammar">
+        </div>
+      </div>
+    </div>
+
+    <div id="pda-modal" class="modal">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2><i class="fas fa-server"></i> PDA Description</h2>
+        <div class="modal-image-container">
+          <img id="pda-image" src="" alt="PDA Description">
+        </div>
       </div>
     </div>
   </main>
@@ -82,8 +118,8 @@
     cytoscape.use(cytoscapeDagre);
 
     // timing constants for slower pace
-    const STEP_DELAY     = 400;
-    const ANIM_DURATION  = 300;
+    const STEP_DELAY     = 800;
+    const ANIM_DURATION  = 500;
     const RESET_DURATION = 150;
 
     // UI refs
@@ -143,6 +179,17 @@
       alphabet: ['q20', 'q21']
     }
 
+    const PDA_IMAGE_PATHS = {
+       binary:  "{{ url_for('static', filename='image/PDA_BINARY.png') }}",
+       alphabet:"{{ url_for('static', filename='image/PDA_ALPHABET.png') }}"
+    };
+
+    const CFG_IMAGE_PATHS = {
+       binary:  "{{ url_for('static', filename='image/CFG_BINARY.jpg') }}",
+       alphabet:"{{ url_for('static', filename='image/CFG_ALPHABET.jpg') }}"
+    }
+
+    {
     function buildElements(transitions, acceptStates = []) {
       const states = Object.keys(transitions);
       const START  = 'q0';
@@ -172,10 +219,10 @@
       container: document.getElementById('cy'),
       elements: [],
       style: [
-        { selector:'node', style:{ label:'data(id)', 'text-valign':'center', 'text-halign':'center', 'background-color':'#444', 'color':'#fff', width:40, height:40, 'border-width':2, 'border-color':'#222' }},
+        { selector:'node', style:{ label:'data(id)', 'text-valign':'center', 'text-halign':'center', 'background-color':'#444', 'color':'#fff', width:70, height:70, 'font-size':25, 'border-width':2, 'border-color':'#222' }},
         { selector:'node.start', style:{ 'border-color':'#48bb78','border-width':4 }},
         { selector:'node.accept', style:{ shape:'doublecircle','border-color':'#e53e3e','border-width':4 }},
-        { selector:'edge', style:{ 'curve-style':'bezier','target-arrow-shape':'triangle', label:'data(label)','font-size':20, 'line-color':'#888','target-arrow-color':'#888' }},
+        { selector:'edge', style:{ 'curve-style':'bezier','target-arrow-shape':'triangle', label:'data(label)','font-size':20, 'line-color':'#888','target-arrow-color':'#888', }},
         { selector:'.highlighted', style:{ 'background-color':accentColor,'line-color':accentColor,'target-arrow-color':accentColor }}
       ],
       layout:{ name:'dagre', rankDir:'LR', nodeSep:50, edgeSep:10, rankSep:100, padding:20 }
@@ -214,10 +261,13 @@
       });
     }
 
-    // UI toggle + graph rebuild
-    function updateUI(){
-      if(select.value === 'binary' || select.value === 'alphabet'){
-        regexDisplay.textContent = defaultRegexMap[select.value];
+    // UPDATE UI + GRAPH OUTPUT
+    function updateUI() {
+      const mode = select.value;   // "binary" or "alphabet"
+
+      if (mode === 'binary' || mode === 'alphabet') {
+        // 1) regex & controls
+        regexDisplay.textContent = defaultRegexMap[mode];
         regexCard.classList.replace('hidden','visible');
         cyCard  .classList.replace('hidden','visible');
         inputBox.disabled    = false;
@@ -225,14 +275,15 @@
         resultDiv.textContent = 'Waiting for simulation...';
         resultDiv.className   = 'result-empty';
 
-        const mode = select.value;
-        const table = TRANSITIONS[mode];
-        const acceptStates = ACCEPT_MAP[mode];
-        const newElements = buildElements(table, acceptStates);
-        
-        cy.json({ elements: newElements });
+        // 2) rebuild DFA graph
+        const table       = TRANSITIONS[mode];
+        const acceptList  = ACCEPT_MAP[mode];
+        const elems       = buildElements(table, acceptList);
+        cy.json({ elements: elems });
         cy.layout({ name:'dagre', rankDir:'LR', nodeSep:50, edgeSep:10, rankSep:100, padding:20 }).run();
+
       } else {
+        // hide everything & clear PDA
         regexCard.classList.replace('visible','hidden');
         cyCard  .classList.replace('visible','hidden');
         inputBox.disabled    = true;
@@ -248,14 +299,415 @@
     });
     resetBtn.addEventListener('click', ()=>location.reload());
 
-    // theme toggle
-    document.getElementById('mode-toggle').addEventListener('click', ()=>{
-      const root = document.documentElement;
-      const next = root.getAttribute('data-theme')==='light'?'dark':'light';
-      root.setAttribute('data-theme', next);
-      document.cookie = `theme=${next};path=/;max-age=31536000`;
+  // Theme toggle
+const modeToggle = document.getElementById('mode-toggle');
+const modeIcon = document.getElementById('mode-icon');
+
+modeToggle.addEventListener('click', () => {
+  const root = document.documentElement;
+  const currentTheme = root.getAttribute('data-theme');
+  const nextTheme = currentTheme === 'light' ? 'dark' : 'light';
+  
+  // Update theme attribute and cookie
+  root.setAttribute('data-theme', nextTheme);
+  document.cookie = `theme=${nextTheme};path=/;max-age=31536000`;
+  
+  // Update the icon
+  if (nextTheme === 'dark') {
+    modeIcon.classList.remove('fa-moon');
+    modeIcon.classList.add('fa-sun');
+  } else {
+    modeIcon.classList.remove('fa-sun');
+    modeIcon.classList.add('fa-moon');
+  }
+});
+
+// Initialize icon based on current theme
+document.addEventListener('DOMContentLoaded', () => {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  if (currentTheme === 'light') {
+    modeIcon.classList.remove('fa-moon');
+    modeIcon.classList.add('fa-sun');
+  }
+});
+
+    // Modal functionality
+    const cfgModal = document.getElementById('cfg-modal');
+    const pdaModal = document.getElementById('pda-modal');
+    const cfgBtn = document.getElementById('show-cfg-btn');
+    const pdaBtn = document.getElementById('show-pda-btn');
+    const closeBtns = document.querySelectorAll('.close');
+
+    // Show the modal when buttons are clicked
+    cfgBtn.addEventListener('click', () => {
+      const mode = select.value;
+      if (mode === 'binary' || mode === 'alphabet') {
+        document.getElementById('cfg-image').src = CFG_IMAGE_PATHS[mode];
+        cfgModal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+      } else {
+        alert('Please select a language type first');
+      }
     });
+
+    pdaBtn.addEventListener('click', () => {
+      const mode = select.value;
+      if (mode === 'binary' || mode === 'alphabet') {
+        document.getElementById('pda-image').src = PDA_IMAGE_PATHS[mode];
+        pdaModal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+      } else {
+        alert('Please select a language type first');
+      }
+    });
+
+    // Close modals when X is clicked
+    closeBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        cfgModal.style.display = 'none';
+        pdaModal.style.display = 'none';
+        document.body.style.overflow = '';
+      });
+    });
+
+    // Close modals when clicking outside content
+    window.addEventListener('click', (event) => {
+      if (event.target === cfgModal) {
+        cfgModal.style.display = 'none';
+        document.body.style.overflow = '';
+      }
+      if (event.target === pdaModal) {
+        pdaModal.style.display = 'none';
+        document.body.style.overflow = '';
+      }
+    });
+
+    // Allow zoom and pan on images
+    const cfgImage = document.getElementById('cfg-image');
+    const pdaImage = document.getElementById('pda-image');
+
+    function setupImageControls(imgElement) {
+      let scale = 1;
+      let panning = false;
+      let pointX = 0;
+      let pointY = 0;
+      let start = { x: 0, y: 0 };
+      
+      function setTransform() {
+        imgElement.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`;
+      }
+
+      // Mouse wheel zoom
+      imgElement.parentElement.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const xs = (e.clientX - pointX) / scale;
+        const ys = (e.clientY - pointY) / scale;
+        const delta = -e.deltaY * 0.01;
+        
+        // Limit scale
+        scale = Math.min(Math.max(0.5, scale + delta), 5);
+        
+        pointX = e.clientX - xs * scale;
+        pointY = e.clientY - ys * scale;
+        
+        setTransform();
+      });
+
+      // Mouse drag to pan
+      imgElement.parentElement.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        start = { x: e.clientX - pointX, y: e.clientY - pointY };
+        panning = true;
+      });
+      
+      imgElement.parentElement.addEventListener('mousemove', (e) => {
+        e.preventDefault();
+        if (!panning) return;
+        pointX = e.clientX - start.x;
+        pointY = e.clientY - start.y;
+        setTransform();
+      });
+      
+      imgElement.parentElement.addEventListener('mouseup', () => {
+        panning = false;
+      });
+      
+      // Double click to reset zoom
+      imgElement.parentElement.addEventListener('dblclick', () => {
+        scale = 1;
+        pointX = 0;
+        pointY = 0;
+        setTransform();
+      });
+    }
+
+    // Initialize zoom and pan functionality
+    setupImageControls(cfgImage);
+    setupImageControls(pdaImage);
+
+    // Add tooltips to buttons
+    const tooltip = document.createElement('div');
+    tooltip.className = 'tooltip';
+    document.body.appendChild(tooltip);
+
+    // Style for tooltip
+    const style = document.createElement('style');
+    style.textContent = `
+      .tooltip {
+        position: absolute;
+        background: var(--accent);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s;
+        z-index: 1001;
+      }
+    `;
+    document.head.appendChild(style);
+
+    function showTooltip(e, message) {
+      tooltip.textContent = message;
+      tooltip.style.opacity = '1';
+      tooltip.style.left = `${e.pageX + 10}px`;
+      tooltip.style.top = `${e.pageY + 10}px`;
+    }
+
+    function hideTooltip() {
+      tooltip.style.opacity = '0';
+    }
+
+    // Add tooltip listeners
+    cfgBtn.addEventListener('mouseover', (e) => showTooltip(e, 'View full Context-Free Grammar diagram'));
+    cfgBtn.addEventListener('mouseout', hideTooltip);
+
+    pdaBtn.addEventListener('mouseover', (e) => showTooltip(e, 'View full PDA diagram'));
+    pdaBtn.addEventListener('mouseout', hideTooltip);
+    }});
+
+
+
+function validateDFA(input, mode) {
+  let currentState = 'q0';
+  
+  for (const char of input) {
+    const transitions = TRANSITIONS[mode][currentState];
+    if (!transitions || !transitions[char]) {
+      return false; // Invalid transition
+    }
+    currentState = transitions[char];
+  }
+  
+  return ACCEPT_MAP[mode].includes(currentState);
+}
+
+// PDA and CFG validation script
+document.addEventListener('DOMContentLoaded', () => {
+  // Get UI references
+  const inputBox = document.getElementById('input-string');
+  const regexSelect = document.getElementById('regex-select');
+  const pdaStatusEl = document.getElementById('pda-status');
+  const cfgStatusEl = document.getElementById('cfg-status');
+  const checkPdaBtn = document.getElementById('check-pda-btn');
+  const checkCfgBtn = document.getElementById('check-cfg-btn');
+
+  // DFA configurations (copied from existing code for consistency)
+  const TRANSITIONS = {
+    binary: {
+      q0:{0:'q2',1:'q1'}, q1:{0:'q3',1:'q3'},
+      q2:{0:'q4',1:'T1'},q3:{0:'T2',1:'q5'},
+      q4:{0:'q5',1:'q5'},q5:{0:'q7',1:'q6'},
+      q6:{0:'q7',1:'q8'},q7:{0:'q8',1:'q6'},
+      q8:{0:'q10',1:'q9'},q9:{0:'q11',1:'q12'},
+      q10:{0:'q13',1:'q5'},q11:{0:'q8',1:'q14'},
+      q12:{0:'q10',1:'q14'},q13:{0:'q14',1:'q9'},
+      q14:{0:'q16',1:'q15'},q15:{0:'q16',1:'q17'},
+      q16:{0:'q17',1:'q15'},q17:{0:'q19',1:'q18'},
+      q18:{0:'q15',1:'q20'},q19:{0:'q20',1:'q17'},
+      q20:{0:'q21',1:'q20'},q21:{0:'q21',1:'q21'},
+      T1:{0:'T1',1:'T1'},T2:{0:'T2',1:'T2'}
+    },
+    alphabet: {
+      q0:{a:'q1',b:'q2'},q1:{a:'T1',b:'q3'},
+      q2:{a:'q3',b:'T2'},q3:{a:'q4',b:'q5'},
+      q4:{a:'q6',b:'q7'},q5:{a:'q3',b:'q8'},
+      q6:{a:'q9',b:'q3'},q7:{a:'q9',b:'q3'},
+      q8:{a:'q3',b:'q9'},q9:{a:'q9',b:'q10'},
+      q10:{a:'q11',b:'q10'},q11:{a:'q12',b:'q12'},
+      q12:{a:'q13',b:'q14'},q13:{a:'q15',b:'q12'},
+      q14:{a:'q12',b:'q15'},q15:{a:'q16',b:'q17'},
+      q16:{a:'q21',b:'q18'},q17:{a:'q19',b:'q20'},
+      q18:{a:'q21',b:'q17'},q19:{a:'q16',b:'q20'},
+      q20:{a:'q16',b:'q17'},q21:{a:'q11',b:'q17'},
+      T1:{a:'T1',b:'T1'},T2:{a:'T2',b:'T2'}
+    }
+  };
+
+  const ACCEPT_MAP = {
+    binary: ['q21'],
+    alphabet: ['q20', 'q21']
+  };
+
+  // This function validates input against the selected automaton type
+  function validateInput(input, mode) {
+    if (!mode || !input) return false;
+    
+    let currentState = 'q0';
+    
+    for (const char of input) {
+      const transitions = TRANSITIONS[mode][currentState];
+      // Check if transition exists for this character
+      if (!transitions || !transitions[char]) {
+        return false; // Invalid transition
+      }
+      currentState = transitions[char];
+    }
+    
+    // Check if we ended in an accept state
+    return ACCEPT_MAP[mode].includes(currentState);
+  }
+
+  // Update buttons' enabled/disabled state based on input and language selection
+  function updateValidationButtons() {
+    const mode = regexSelect.value;
+    const input = inputBox.value.trim();
+    
+    // Enable/disable buttons based on having both mode and input
+    const hasValidInput = mode && (mode === 'binary' || mode === 'alphabet') && input.length > 0;
+    checkPdaBtn.disabled = !hasValidInput;
+    checkCfgBtn.disabled = !hasValidInput;
+    
+    // Reset status displays
+    if (!hasValidInput) {
+      pdaStatusEl.textContent = "";
+      pdaStatusEl.className = "status-waiting";
+      cfgStatusEl.textContent = "";
+      cfgStatusEl.className = "status-waiting";
+    }
+  }
+
+  // Add event listeners to update validation button status
+  regexSelect.addEventListener('change', updateValidationButtons);
+  inputBox.addEventListener('input', updateValidationButtons);
+  
+  // Function to validate PDA
+  function validatePDA() {
+    const mode = regexSelect.value;
+    const input = inputBox.value.trim();
+    
+    if (!mode || !input) {
+      pdaStatusEl.textContent = "No input";
+      pdaStatusEl.className = "status-waiting";
+      return;
+    }
+    
+    const isValid = validateInput(input, mode);
+    
+    pdaStatusEl.textContent = isValid ? "ACCEPTED" : "REJECTED";
+    pdaStatusEl.className = isValid ? "status-valid" : "status-invalid";
+  }
+  
+  // Function to validate CFG
+  function validateCFG() {
+    const mode = regexSelect.value;
+    const input = inputBox.value.trim();
+    
+    if (!mode || !input) {
+      cfgStatusEl.textContent = "No input";
+      cfgStatusEl.className = "status-waiting";
+      return;
+    }
+    
+    const isValid = validateInput(input, mode);
+    
+    cfgStatusEl.textContent = isValid ? "ACCEPTED" : "REJECTED";
+    cfgStatusEl.className = isValid ? "status-valid" : "status-invalid";
+  }
+  
+  // Add click event listeners for validation buttons
+  checkPdaBtn.addEventListener('click', validatePDA);
+  checkCfgBtn.addEventListener('click', validateCFG);
+  
+  // Add CSS for the status indicators
+  const styleElement = document.createElement('style');
+  styleElement.textContent = `
+    .status-waiting {
+      color: #888;
+      font-style: italic;
+    }
+    
+    .status-valid {
+      color: #48bb78;
+      font-weight: bold;
+    }
+    
+    .status-invalid {
+      color: #e53e3e;
+      font-weight: bold;
+    }
+    
+    .validation-item {
+      display: flex;
+      align-items: center;
+      margin: 10px 0;
+    }
+    
+    .status-label {
+      font-weight: bold;
+      margin-right: 10px;
+    }
+    
+    .status-content {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .check-btn {
+      padding: 4px 8px;
+      font-size: 0.8rem;
+    }
+  `;
+  document.head.appendChild(styleElement);
+  
+  // Modify the updateUI function to enable PDA/CFG validation buttons
+  const originalUpdateUI = select.onchange;
+  regexSelect.addEventListener('change', function() {
+    const mode = regexSelect.value;
+    
+    if (mode === 'binary' || mode === 'alphabet') {
+      // Enable validation when input is present
+      if (inputBox.value.trim()) {
+        checkPdaBtn.disabled = false;
+        checkCfgBtn.disabled = false;
+      }
+    } else {
+      // Disable validation when no language is selected
+      checkPdaBtn.disabled = true;
+      checkCfgBtn.disabled = true;
+      
+      // Reset status displays
+      pdaStatusEl.textContent = "";
+      pdaStatusEl.className = "status-waiting";
+      cfgStatusEl.textContent = "";
+      cfgStatusEl.className = "status-waiting";
+    }
   });
+  
+  // Also listen for input changes to enable/disable buttons
+  inputBox.addEventListener('input', function() {
+    const mode = regexSelect.value;
+    const hasInput = inputBox.value.trim().length > 0;
+    
+    if (mode === 'binary' || mode === 'alphabet') {
+      checkPdaBtn.disabled = !hasInput;
+      checkCfgBtn.disabled = !hasInput;
+    }
+  });
+});
+
   </script>
 </body>
 </html>

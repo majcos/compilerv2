@@ -352,3 +352,180 @@
   .visible { display: block !important; }
 
     }
+
+
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.6);
+    backdrop-filter: blur(3px);
+  }
+
+  /* Modal Content */
+  .modal-content {
+    position: relative;
+    background-color: var(--card-bg);
+    margin: 5% auto;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    width: 90%;
+    max-width: 1200px;
+    max-height: 90vh;
+    overflow: auto;
+  }
+
+  /* Close Button */
+  .close {
+    position: absolute;
+    right: 1rem;
+    top: 0.5rem;
+    color: var(--text-secondary);
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  
+  .close:hover {
+    color: var(--accent);
+  }
+
+  /* Image Container */
+  .modal-image-container {
+    width: 100%;
+    overflow: auto;
+    text-align: center;
+    margin-top: 1rem;
+  }
+
+  .modal-image-container img {
+    max-width: none; /* Allow image to be shown at original size */
+    display: inline-block;
+  }
+
+  /* Button styling */
+  #show-cfg-btn, #show-pda-btn {
+    padding: 0.5rem 1rem;
+    background-color: var(--accent-light);
+    color: var(--text);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  #show-cfg-btn:hover, #show-pda-btn:hover {
+    background-color: var(--accent);
+  }
+
+  .placeholder-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: var(--text-secondary);
+  text-align: center;
+  font-style: italic;
+}
+
+/* Zoom controls for modal images */
+.modal-image-container {
+  position: relative;
+  cursor: grab;
+  overflow: hidden;
+  height: 70vh;
+}
+
+.modal-image-container:active {
+  cursor: grabbing;
+}
+
+.modal-image-container img {
+  transform-origin: 0 0;
+  transition: transform 0.05s ease;
+}
+
+/* Controls indicator */
+.modal-content::after {
+  content: "💡 Tip: Scroll to zoom, drag to pan, double-click to reset";
+  position: absolute;
+  bottom: 10px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  padding: 0.5rem;
+  background-color: var(--card-bg);
+  border-top: 1px solid var(--border);
+}
+
+/* Improve button styles */
+.button-group {
+  margin-top: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Animation for the modal */
+@keyframes modalFadeIn {
+  from {opacity: 0; transform: translateY(-20px);}
+  to {opacity: 1; transform: translateY(0);}
+}
+
+.modal-content {
+  animation: modalFadeIn 0.3s ease;
+}
+
+/* Make sure modal fits screen properly */
+@media (max-height: 700px) {
+  .modal-content {
+    margin: 2% auto;
+    max-height: 95vh;
+  }
+  
+  .modal-image-container {
+    height: 60vh;
+  }
+}
+
+
+#show-cfg-btn,
+#show-pda-btn {
+  min-width: 140px;
+}
+
+.validation-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.status-label {
+  font-weight: bold;
+}
+
+.status-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.check-btn {
+  margin-left: auto;
+  /* rest of your button styles */
+}
