@@ -5,7 +5,8 @@
   <title>DFA Simulator</title>
 
   <!-- main stylesheet -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"/>
+ <link rel="stylesheet" href="static/style.css">
+<script src="static/your-dfa.js"></script>
 
   <!-- FontAwesome -->
  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -180,14 +181,15 @@
     }
 
     const PDA_IMAGE_PATHS = {
-       binary:  "{{ url_for('static', filename='image/PDA_BINARY.png') }}",
-       alphabet:"{{ url_for('static', filename='image/PDA_ALPHABET.png') }}"
-    };
+    binary:  "static/PDA_BINARY.png",
+    alphabet:"static/PDA_ALPHABET.png"
+  };
+
 
     const CFG_IMAGE_PATHS = {
-       binary:  "{{ url_for('static', filename='image/CFG_BINARY.png') }}",
-       alphabet:"{{ url_for('static', filename='image/CFG_ALPHABET.png') }}"
-    }
+    binary:  "static/CFG_BINARY.png",
+    alphabet:"static/CFG_ALPHABET.png"
+  };
 
     {
     function buildElements(transitions, acceptStates = []) {
